@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
+console.log("=================1==================");
     // 1. ROUTE FOR WHATSAPP HANDSHAKE (GET /) or (GET /webhook)
     if (request.method === 'GET') {
       console.log("Incoming verification handshake request received");
