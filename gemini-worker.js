@@ -14,8 +14,17 @@ export default {
       }
       return new Response('Forbidden', { status: 403 });
     }
-
+if (request.method === 'POST') {
+  const body = await request.json();
+  
+  // 1. Send the 200 OK immediately to tell WhatsApp "I got it!"
+  ctx.waitUntil(handleProcessing(body, env)); // Run the heavy AI work in the background
+  return new Response('OK', { status: 200 }); 
+}
+   
+    
     // 2. ROUTE FOR INCOMING LIVE WHATSAPP CHATS (POST /)
+    async function handleProcessing(body, env) {
     if (request.method === 'POST') {
       try {
         const body = await request.json();
@@ -132,6 +141,6 @@ if (gatewayData.choices && gatewayData.choices[0].message) {
       }
     }
 
-    return new Response('ShelSun Tech Bot API Live Node.', { status: 200 });
+    return new Response('ShelSun Tech Bot API Live Node.', { status: 200 });}
   }
 };
