@@ -1,10 +1,10 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-console.log("=================1=================");
-    // 1. ROUTE FOR WHATSAPP HANDSHAKE (GET /) or (GET /webhook)
+    console.log("=================1=================");
+
+    // 1. ROUTE FOR WHATSAPP HANDSHAKE
     if (request.method === 'GET') {
-      console.log("Incoming verification handshake request received");
       const mode = url.searchParams.get('hub.mode');
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
@@ -19,69 +19,47 @@ console.log("=================1=================");
     if (request.method === 'POST') {
       try {
         const body = await request.json();
-        console.log("Webhook payload payload body extracted:", JSON.stringify(body));
-
-        // Safe layer verification checks
-        if (!body.object || !body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
-          console.log("Ignored: Payload structure does not match message layout format");
-          return new Response('Event ignored', { status: 200 });
-        }
+        
+        // ... (Keep your existing safe layer verification checks)
+        if (!body.object || !body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) return new Response('Event ignored', { status: 200 });
 
         const messageData = body.entry[0].changes[0].value.messages[0];
         const customerPhone = messageData.from;
-
-        if (messageData.type !== 'text') {
-          console.log("Ignored: Received a non-text format payload category style");
-          return new Response('Not a text message', { status: 200 });
-        }
+        if (messageData.type !== 'text') return new Response('Not a text message', { status: 200 });
+        
         const customerText = messageData.text.body;
-        console.log(`Processing message from ${customerPhone}: "${customerText}"`);
 
-        // VERIFIED GEMINI 3.1 FLASH LITE ENDPOINT
-        //const geminiUrl = `https://googleapis.com{env.GEMINI_API_KEY}`;
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${env.GEMINI_API_KEY}`;
+        // --- NEW GATEWAY INTEGRATION START ---
+        // We now route through the Cloudflare Dynamic Route instead of direct to Google
+        const GATEWAY_URL = `https://gateway.ai.cloudflare.com/v1/${env.ACCOUNT_ID}/${env.GATEWAY_ID}/dynamic/receptionist-flow`;
 
-        console.log("Calling Google AI Studio engine framework...");
-        const geminiResponse = await fetch(geminiUrl, {
+        console.log("Routing request through AI Gateway flow...");
+        const gatewayResponse = await fetch(GATEWAY_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}` // Ensure this secret is set
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: customerText }] }],
-            //systemInstruction: { 
-              //parts: [{ text: "You are a professional customer service assistant for ShelSun Tech. Keep answers to 2 sentences max." }] 
-            
-            //}
-            systemInstruction: { 
-  parts: [{ text: 
-    "You are a professional, polite, and helpful AI corporate customer service assistant for ShelSun Tech.\n\n" +
-    "CRITICAL LANGUAGES RULE:\n" +
-    "1. If the user messages you in English, reply in natural English.\n" +
-    "2. If the user messages you in Hindi script (हिंदी), reply in pure, polite Hindi script.\n" +
-    "3. If the user messages you in Hinglish (Hindi words written using English alphabets, e.g., 'bhai price kya hai' or 'meri query solve karo'), you MUST reply back in smooth, natural Hinglish using the English script.\n" +
-    "4. Always perfectly mirror the vocabulary, tone, and script style used by the customer.\n\n" +
-    "5. If someone asks for contact details tell them to write on shelsuntech@gmail.com or call on +918076664199.\n\n"+
-    
-    "RESPONSE RULES:\n" +
-    "- Keep all answers strictly limited to 2 short sentences maximum.\n" +
-    "- Be concise, direct, and business-focused.\n" +
-    "- Do not hallucinate capabilities; if you don't know something about ShelSun Tech, ask them politely to wait for a human team member or write to shelsuntech@gmail.com or call on +918076664199."
-  //  "- If someone asks for contact details tell them to write on shelsuntech@gmail.com or call on +918076664199."
-  }] 
-}
-
+            messages: [
+              { 
+                role: "system", 
+                content: "You are a professional, polite, and helpful AI corporate customer service assistant for ShelSun Tech..." // Add your full prompt here
+              },
+              { role: "user", content: customerText }
+            ]
           })
         });
 
-        const geminiData = await geminiResponse.json();
-        const botReply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I am having trouble responding right now.";
-        console.log(`Gemini response parsed successfully: "${botReply}"`);
+        const gatewayData = await gatewayResponse.json();
+        // The Gateway returns the response from either Gemini or the Llama fallback automatically
+        const botReply = gatewayData.choices?.[0]?.message?.content || "Sorry, I am having trouble responding.";
+        console.log(`Gateway response received: "${botReply}"`);
+        // --- NEW GATEWAY INTEGRATION END ---
 
-        // VERIFIED META GRAPH API v20.0 ENDPOINT
-        //const metaUrl = `https://facebook.com{env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+        // 3. VERIFIED META GRAPH API v20.0 ENDPOINT
         const metaUrl = `https://graph.facebook.com/v20.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-        console.log(`Sending response payload back to phone ${customerPhone}...`);
-        const metaResponse = await fetch(metaUrl, {
+        await fetch(metaUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
@@ -95,9 +73,6 @@ console.log("=================1=================");
             text: { preview_url: false, body: botReply }
           })
         });
-
-        const metaResult = await metaResponse.text();
-        console.log("Meta execution delivery confirmation:", metaResult);
 
         return new Response('Success', { status: 200 });
       } catch (error) {
