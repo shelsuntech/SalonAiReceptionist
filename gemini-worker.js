@@ -53,7 +53,7 @@ export default {
 
         const gatewayData = await gatewayResponse.json();
         // The Gateway returns the response from either Gemini or the Llama fallback automatically
-        const botReply = gatewayData.choices?.[0]?.message?.content || "Sorry, I am having trouble responding.";
+        const botReply = gatewayData.choices?.[0]?.message?.content || gatewayData.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I am having trouble responding.";
         console.log(`Gateway response received: "${botReply}"`);
         // --- NEW GATEWAY INTEGRATION END ---
 
