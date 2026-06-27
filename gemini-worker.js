@@ -59,6 +59,7 @@ const gatewayResponse = await fetch(GATEWAY_URL, {
     'cf-aig-authorization': `Bearer ${env.CF_AIG_TOKEN}`
   },
   body: JSON.stringify({
+    model: "dynamic/receptionist-ai-gateway", // Must match your route name exactly
     messages: [
       { role: "system", content: "You are a helpful assistant for ShelSun Tech." },
       { role: "user", content: customerText }
