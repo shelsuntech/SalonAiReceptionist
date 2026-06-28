@@ -37,7 +37,7 @@ if (!changes?.messages?.[0]) {
 }
 
 // Now you can safely proceed with your existing message logic:
-const messageData = changes.messages[0];
+//const messageData = changes.messages[0];
 // ... rest of your code
         
         const body = await request.json();
