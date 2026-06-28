@@ -12,7 +12,11 @@ export default {
       }
       return new Response('Forbidden', { status: 403 });
     }
+const requestId = crypto.randomUUID();
 
+console.log(`[${requestId}] ===== WEBHOOK START =====`);
+console.log(`[${requestId}] Time: ${new Date().toISOString()}`);
+console.log(`[${requestId}] Body: ${JSON.stringify(body, null, 2)}`);
     // 2. ROUTE FOR INCOMING LIVE WHATSAPP CHATS
     if (request.method === 'POST') {
       const body = await request.json();
@@ -23,6 +27,7 @@ console.log(JSON.stringify(body, null, 2));
 
       // Check for Status Updates (Ignore these)
       if (body.entry?.[0]?.changes?.[0]?.value?.statuses) {
+        console.log(`[${requestId}] Ignored: status update`);
         return new Response('Status update ignored', { status: 200 });
       }
 
@@ -31,6 +36,8 @@ console.log(JSON.stringify(body, null, 2));
 console.log("messageData:",JSON.stringify(messageData, null, 2));
       
       if (!messageData || messageData.type !== 'text') {
+        console.log(`[${requestId}] Ignored: message type = ${messageData.type}`);
+        console.log(`[${requestId}] Ignored: no messageData`);
         return new Response('Event ignored', { status: 200 });
       }
 
@@ -42,6 +49,10 @@ console.log("messageData:",JSON.stringify(messageData, null, 2));
     return new Response('ShelSun Tech Bot API Live Node.', { status: 200 });
   }
 };
+console.log(`[${requestId}] From: ${messageData.from}`);
+console.log(`[${requestId}] Message ID: ${messageData.id}`);
+console.log(`[${requestId}] Message Type: ${messageData.type}`);
+console.log(`[${requestId}] Text: ${messageData.text?.body}`);
 
 async function handleProcessing(messageData, body, env) {
   const customerPhone = messageData.from;
@@ -49,7 +60,7 @@ async function handleProcessing(messageData, body, env) {
 
 console.log("Customer:", customerPhone);
 console.log("Text:", customerText);
-
+console.log(`[${requestId}] Gemini input: ${customerText}`);
   if (
     messageData.from === env.WHATSAPP_PHONE_NUMBER_ID
 ) {
@@ -136,9 +147,19 @@ console.log("Text:", customerText);
       console.error("Llama also failed:", llamaError.message);
     }
   }
-
+console.log(`[${requestId}] Gemini reply: ${botReply}`);
   // C. SEND TO WHATSAPP
-  await fetch(`https://graph.facebook.com/v20.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+  //const waResponse = await fetch(...);
+
+  const waResponse  = await fetch(`https://graph.facebook.com/v20.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+  
+console.log(
+  `[${requestId}] WhatsApp API Status: ${waResponse.status}`
+);
+
+console.log(
+  `[${requestId}] WhatsApp API Response: ${await waResponse.text()}`
+);
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
