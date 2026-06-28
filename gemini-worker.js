@@ -21,6 +21,7 @@ console.log("=================1=================");
       try {
         console.log("=================3=======inside post method==========");
 // Inside your POST block, before extracting messageData:
+        const body = await request.json();
 const entry = body.entry?.[0];
 const changes = entry?.changes?.[0]?.value;
 
@@ -40,7 +41,7 @@ if (!changes?.messages?.[0]) {
 //const messageData = changes.messages[0];
 // ... rest of your code
         
-        const body = await request.json();
+        //const body = await request.json();
         console.log("Webhook payload payload body extracted:", JSON.stringify(body));
 
         // Safe layer verification checks
