@@ -403,9 +403,11 @@ console.log("WhatsApp message sent successfully.");
   // ======================================================
 // SAVE / UPDATE CRM/Google sheet
 // ======================================================
-
+console.log(`[${requestId}] Google URL: ${env.GOOGLE_SHEET_WEBHOOK_URL}`);
+  
 try {
-
+ console.log(`[${requestId}] Starting CRM call`);
+  
   const crmResponse = await fetch(
     env.GOOGLE_SHEET_WEBHOOK_URL,
     {
@@ -444,10 +446,14 @@ try {
       })
     }
   );
-
   console.log(
-    "CRM:",
-    await crmResponse.text()
+  `[${requestId}] CRM HTTP Status: ${crmResponse.status}`
+);
+  const crmText = await crmResponse.text();
+
+console.log(
+  `[${requestId}] CRM Response: ${crmText}`
+);
   );
 
 }
@@ -460,12 +466,6 @@ catch (err) {
 
 }
 
-  const waResponseBody =
-    await waResponse.text();
-
-  console.log(
-    `[${requestId}] WhatsApp Response: ${waResponseBody}`
-  );
 
   console.log(
     `[${requestId}] ===== PROCESSING COMPLETE =====`
